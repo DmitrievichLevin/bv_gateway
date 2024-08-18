@@ -4,92 +4,106 @@
  * Module dependencies.
  */
 
-import debugPkg from 'debug';
 import http from 'http';
-import app from '../app';
+import { director } from '../app';
+import errorHandler from '../error/errorHandler';
 
-const debug = debugPkg('ts/www:server');
+require('dotenv').config();
 
-/**
- * Get port from environment and store in Express.
- */
+const debug = require('debug')('http');
 
-const port = normalizePort(process.env.PORT || '3001');
-app.set('port', port);
+director
+  .build()
+  .then((app) => {
+    /**
+     * Get port from environment and store in Express.
+     */
+    const port = normalizePort(process.env.PORT || '3001');
+    app.set('port', port);
 
-/**
- * Create HTTP server.
- */
+    // Custom error handler
+    app.use(errorHandler);
 
-const server = http.createServer(app);
+    /**
+     * Create HTTP server.
+     */
 
-/**
- * Listen on provided port, on all network interfaces.
- */
+    const server = http.createServer(app);
 
-server.listen(port, () => {
-  console.log(`App listening on PORT ${port}`);
-});
+    /**
+     * Listen on provided port, on all network interfaces.
+     */
 
-server.on('error', onError);
-server.on('listening', onListening);
+    server.listen(port, () => {
+      debug(`App listening on http://localhost:${port}`);
+    });
 
-/**
- * Normalize a port into a number, string, or false.
- */
+    server.on('error', onError);
+    server.on('listening', onListening);
 
-function normalizePort(val: string) {
-  const portNum = parseInt(val, 10);
+    /**
+     * Normalize a port into a number, string, or false.
+     */
 
-  if (Number.isNaN(portNum)) {
-    // named pipe
-    return val;
-  }
+    function normalizePort(val: string) {
+      const portNum = parseInt(val, 10);
 
-  if (portNum >= 0) {
-    // port number
-    return portNum;
-  }
+      if (Number.isNaN(portNum)) {
+        // named pipe
+        return val;
+      }
 
-  return false;
-}
+      if (portNum >= 0) {
+        // port number
+        return portNum;
+      }
 
-/**
- * Event listener for HTTP server "error" event.
- */
-// eslint-disable-next-line no-undef
-function onError(error: NodeJS.ErrnoException) {
-  if (error.syscall !== 'listen') {
-    throw error;
-  }
+      return false;
+    }
 
-  const bind = typeof port === 'string'
-    ? `Pipe ${port}`
-    : `Port ${port}`;
+    /**
+     * Event listener for HTTP server "error" event.
+     */
+    // eslint-disable-next-line no-undef
+    function onError(error: NodeJS.ErrnoException) {
+      if (error.syscall !== 'listen') {
+        throw error;
+      }
 
-  // handle specific listen errors with friendly messages
-  switch (error.code) {
-    case 'EACCES':
-      console.error(`${bind} requires elevated privileges`);
-      process.exit(1);
-      break;
-    case 'EADDRINUSE':
-      console.error(`${bind} is already in use`);
-      process.exit(1);
-      break;
-    default:
-      throw error;
-  }
-}
+      const bind = typeof port === 'string' ? `Pipe ${port}` : `Port ${port}`;
 
-/**
- * Event listener for HTTP server "listening" event.
- */
+      // handle specific listen errors with friendly messages
+      switch (error.code) {
+        case 'EACCES':
+          debug(`${bind} requires elevated privileges`);
+          process.exit(1);
+          break;
+        case 'EADDRINUSE':
+          debug(`${bind} is already in use`);
+          process.exit(1);
+          break;
+        default:
+          throw error;
+      }
+    }
 
-function onListening() {
-  const addr = server.address();
-  const bind = typeof addr === 'string'
-    ? `pipe ${addr}`
-    : `port ${addr.port}`;
-  debug(`Listening on ${bind}`);
-}
+    /**
+     * Event listener for HTTP server "listening" event.
+     */
+
+    function onListening() {
+      /**
+       * Connect to MongoDB
+       */
+      try {
+        require('../connections/mongo');
+      } catch (e) {
+        debug('Failed to connect to Mongo', e);
+      }
+    }
+    return server;
+  })
+  .catch((err) => {
+    debug(`Error starting sever`, err);
+    process.exit(1);
+  });

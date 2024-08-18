@@ -1,1 +1,0 @@
-{"version":3,"file":"model.interface.js","sourceRoot":"","sources":["../../server/models/model.interface.ts"],"names":[],"mappings":";;;AAAA,mEAAsH;AAetH,MAAe,KAAK;IAClB;QAKA,UAAK,GAA0B,IAAI,CAAC;QAMpC,YAAO,GAA8B,qCAAmB,CAAC;QAVvD,IAAI,CAAC,SAAS,GAAG,IAAI,CAAC,WAAW,CAAC,IAAI,CAAC;QACvC,IAAI,CAAC,KAAK,GAAG,IAAI,IAAI,CAAC,OAAO,CAAC,IAAI,CAAC,CAAC;IACtC,CAAC;CASF;AAGC,sBAAK"}

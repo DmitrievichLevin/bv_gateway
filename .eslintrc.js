@@ -7,12 +7,14 @@ module.exports = {
   parserOptions: {
     project: './tsconfig.json',
   },
+  files: ['*.ts', '*.tsx'],
   plugins: [
     '@typescript-eslint',
   ],
   extends: [
-    'airbnb-typescript/base'
+    "eslint:recommended", "plugin:@typescript-eslint/recommended"
   ],
+  ignorePatterns: ['.eslintrc.js'],
   rules: {
     '@typescript-eslint/no-use-before-define': 0,
     '@typescript-eslint/max-classes-per-file': 0,
@@ -24,7 +26,8 @@ module.exports = {
       noUselessIndex: true,
     }],
     'import/prefer-default-export': 0,
-    '@typescript-eslint/no-unused-vars': ['error', { 'argsIgnorePattern': 'next' }],
+    'class-methods-use-this': 0,
+    '@typescript-eslint/no-unused-vars': ['error', { 'argsIgnorePattern': '_' }],
     'space-before-function-paren': 0,
     radix: 0,
   },

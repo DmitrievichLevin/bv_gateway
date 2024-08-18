@@ -1,121 +1,106 @@
-import { Model } from '../models/model.interface';
+import { Operations } from '../routes/route.interface';
+import { Model } from '../schemas/schemaTypes';
+import t from 'ts-runtime/lib';
+import { Redis } from 'ioredis';
+import { ResourceCache } from '../connections/redis/cache.interface';
+import { UserDocument } from '../models/helpers/types';
 
 /**
- * @todo - create dynamic route builder
- * - grab model files
- * - construct/export routes
- * reference: https://stackoverflow.com/questions/71911584/how-can-i-dynamically-import-a-directory-of-files-from-within-a-loop
+ * @todo delete function should verify bearerToken
+ * ensures that user owns the resource being deleted.
  */
-type HTTPRes = { status: (code: number) => { send(data: { [key: string]: any, message?: string }): void } };
+const debug = require('debug')('controller-interface');
 
-type Query = { [key: string]: any };
+export type ControllerArgs = [
+  typeof Model,
+  Express.Application,
+  Redis,
+  WebSocket
+];
 
-type RequestData = { [key: string]: any };
-
-type HTTPReq = {
-  body: { [key: string]: any, query?: Query, data?: RequestData }
+export type AuthenticatedRequest = Request & {
+  authenticated_user: UserDocument;
 };
 
-type ControllerFactoryConstructable = {
-  new(model: Model): ControllerFactoryInterface;
+export type EnabledHTTP = (
+  req: AuthenticatedRequest,
+  res: Response
+) => Promise<Object | null>;
+
+export type DisabledHTTP = (
+  req: AuthenticatedRequest,
+  res: Response
+) => Promise<void>;
+
+async function getByID(req, _) {
+  const { id } = req.body;
+
+  const data = await this.model.findOne({ id }, {});
+
+  return data;
+}
+
+const DisabledMethod: DisabledHTTP = async (_req, res) => {
+  throw new Error('405 Method Not Allowed', { cause: 405 });
 };
 
-type HTTPMethod = (req: HTTPReq, res: HTTPRes) => void;
-
-abstract class ControllerFactoryInterface {
-  constructor(model: Model) {
+/**
+ *
+ * Concrete Controller Base Class
+ * @class
+ * @example
+ * class TestControllerFactory extends ControllerFactory {
+ *    get = async (req, res) => {
+ *        return 'Hello World'
+ *      };
+ *  }
+ */
+class ControllerFactory {
+  constructor(...args: ControllerArgs) {
+    const [model, app, redis, rpc] = args;
     this.model = model;
+    this.app = app;
+    this.redis = redis;
+    this.rpc = rpc;
   }
 
-  protected model: Model = null;
+  build = () => {
+    Object.getOwnPropertyNames(this).forEach((name) => {
+      if (name in Operations) {
+        this[name] = this[name].bind(this);
+      }
+    });
+    return this;
+  };
 
-  abstract post?(req: HTTPReq, res: HTTPRes): void;
+  model: typeof Model;
 
-  abstract get?(req: HTTPReq, res: HTTPRes): void;
+  app: Express.Application;
 
-  abstract put?(req: HTTPReq, res: HTTPRes): void;
+  redis: Redis;
 
-  abstract delete?(req: HTTPReq, res: HTTPRes): void;
+  post: EnabledHTTP | DisabledHTTP = DisabledMethod;
+
+  patch: EnabledHTTP | DisabledHTTP = DisabledMethod;
+
+  get: EnabledHTTP | DisabledHTTP = DisabledMethod;
+
+  getById: EnabledHTTP | DisabledHTTP = DisabledMethod;
+
+  put: EnabledHTTP | DisabledHTTP = DisabledMethod;
+
+  delete: EnabledHTTP | DisabledHTTP = DisabledMethod;
+
+  middlewares: any[] = [];
+
+  cache: ResourceCache = CacheBypass;
+
+  rpc: WebSocket;
 }
 
-class DefaultControllerFactory extends ControllerFactoryInterface {
-  post(req: HTTPReq, res: HTTPRes) {
-    // Get Model Schema
-    const RouteModel = this.model.Schema;
+export const CacheBypass = {
+  __get: async (params) => null,
+  __set: async (params) => [null, params],
+} as ResourceCache;
 
-    // body -> post object
-    const dict = Object.entries(RouteModel).reduce((d: {
-      [key: string]: any
-    }, [key, next]) => {
-      // eslint-disable-next-line no-param-reassign
-      d[key as keyof object] = req.body[key as keyof object];
-      return d;
-    }, {});
-
-    // instantiate new model
-    const data = new RouteModel(dict);
-
-    // save model
-    data.save((err?: { message?: string }) => {
-      // Default Error Handling
-      if (err) { res.status(500).send({ message: err.message || `Error posting ${this.model.tableName}` }); } else {
-        res.status(200).send({ message: `${this.model.tableName} posted.` });
-      }
-    });
-  }
-
-  get(req: HTTPReq, res: HTTPRes) {
-    // Get Model Schema
-    const RouteModel = this.model.Schema;
-
-    // query
-    const { query } = req.body;
-
-    // get item from db
-    RouteModel.get(query, {}, (err: { message?: string }, data: { get: () => object }) => {
-      // Default Error Handling
-      if (err) { res.status(500).send({ message: err.message || `Error fetching from ${this.model.tableName}` }); } else {
-        res.status(200).send(data.get());
-      }
-    });
-  }
-
-  put(req: HTTPReq, res: HTTPRes) {
-    // Get Model Schema
-    const RouteModel = this.model.Schema;
-
-    // query
-    const { data } = req.body;
-
-    // update and respond with item from db
-    RouteModel.update(data, (err: { message?: string }, updated: { get: () => object }) => {
-      // Default Error Handling
-      if (err) { res.status(500).send({ message: err.message || `Error updating from ${this.model.tableName}` }); } else {
-        res.status(200).send(updated.get());
-      }
-    });
-  }
-
-  delete(req: HTTPReq, res: HTTPRes) {
-    // Get Model Schema
-    const RouteModel = this.model.Schema;
-
-    // query
-    const { data } = req.body;
-
-    // Params
-    const nextParams = {};
-
-    // update and respond with item from db
-    RouteModel.destroy(data, nextParams, (err: { message?: string }, updated: { get: () => object }) => {
-      // Default Error Handling
-      if (err) { res.status(500).send({ message: err.message || `Error updating from ${this.model.tableName}` }); } else {
-        res.status(200).send(updated.get());
-      }
-    });
-  }
-}
-
-export {
-  ControllerFactoryInterface, ControllerFactoryConstructable, DefaultControllerFactory, HTTPMethod
-};
+export { ControllerFactory, getByID, DisabledMethod };

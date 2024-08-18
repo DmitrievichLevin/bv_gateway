@@ -1,0 +1,4 @@
+{
+    "typescript.enablePromptUseWorkspaceTsdk": false,
+    "js/ts.implicitProjectConfig.target": "ESNext"
+}
