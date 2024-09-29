@@ -9,15 +9,15 @@ class ServiceController extends ControllerFactory {
     const document = new MultiMediaModel(req, res, this.model);
 
     const service = await document.save();
-    debug('check multi save return', service);
+
     return service;
   };
 
   get = async (req, res) => {
     const { id } = req.query;
+    // JSON-Stream
     const model = new MediaDocument(req, res, this.model);
-    const services = await model.find({ parent: id });
-    debug('Tracking service Find', services);
+    await model.find({ parent: id });
     return null;
   };
 

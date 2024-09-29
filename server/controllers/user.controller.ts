@@ -51,11 +51,13 @@ class UserController extends ControllerFactory {
 
     const user = new this.model(newUserProps);
 
+    const __vendorId = new ObjectId();
+
     let vendorDep: DependentDocument = {
       properties: {
         location,
         contact: { phone: phone.replace(/([\+\-])/g, '') },
-        _id: new ObjectId(),
+        _id: __vendorId,
         name: businessName || DefaultBusinessName(firstName),
       },
       model: model('vendor', VendorSchema),
@@ -63,7 +65,7 @@ class UserController extends ControllerFactory {
     };
 
     let settingsDep: DependentDocument = {
-      properties: { _id: new ObjectId() },
+      properties: { _id: new ObjectId(), vendorId: __vendorId.toString() },
       model: model('settings', SettingsSchema),
       path: 'settings',
     };

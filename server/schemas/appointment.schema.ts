@@ -13,18 +13,6 @@ import {
 } from './fields';
 import { BevorSchema, defaultSchemaOptions } from './general';
 
-const CustomerSchema = BevorSchema({
-  firstName: StringReq,
-  lastName: StringReq,
-  isNewCustomer: BoolDef,
-  email: EmailField,
-  phone: PhoneField,
-  id: IdField,
-  autoMessage: BoolDef,
-  location: LocationField,
-  address: StreetAddressField,
-});
-
 export const AppointmentSchema = BevorSchema({
   id: IdField,
   vendorId: IdField,

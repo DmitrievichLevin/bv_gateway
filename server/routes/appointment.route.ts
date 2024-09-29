@@ -3,7 +3,7 @@ import { AppointmentSchema } from '../schemas/appointment.schema';
 import AppointmentController from '../controllers/appointment.controller';
 
 class Appointment extends RouteFactory {
-  collection = 'event';
+  collection = 'appointment';
   controller = AppointmentController;
   schema = AppointmentSchema;
 }
